@@ -1,65 +1,118 @@
-# Makefile for C-OS Ultimate Kernel
-
-CC = g++
-CFLAGS = -m32 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -std=c++17
-ASM = nasm
+CC = gcc
+CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -I$(SRC_DIR)/include -I$(SRC_DIR)/kernel -I$(SRC_DIR)/kernel/arch -I$(SRC_DIR)/kernel/mm -I$(SRC_DIR)/drivers/video -I$(SRC_DIR)/drivers/input -I$(SRC_DIR)/drivers/disk -I$(SRC_DIR)/fs -I$(SRC_DIR)/gui -c
+AS = nasm
 ASFLAGS = -f elf32
 LD = ld
-LDFLAGS = -m elf_i386 -nostdlib
+LDFLAGS = -m elf_i386 -T src/boot/linker.ld
 
-SRCDIR = src
-BUILDDIR = build
+SRC_DIR = src
+OBJ_DIR = obj
+KERNEL_BIN = kernel.bin
 
-KERNEL_SRCS = $(wildcard $(SRCDIR)/kernel/*.cpp)
-KERNEL_OBJS = $(patsubst $(SRCDIR)/kernel/%.cpp,$(BUILDDIR)/kernel/%.o,$(KERNEL_SRCS))
-BOOT_OBJ = $(BUILDDIR)/boot/boot.o
+OBJS = $(OBJ_DIR)/boot.o \
+       $(OBJ_DIR)/kernel.o \
+       $(OBJ_DIR)/io.o \
+       $(OBJ_DIR)/idt.o \
+       $(OBJ_DIR)/isr.o \
+       $(OBJ_DIR)/irq.o \
+       $(OBJ_DIR)/serial.o \
+       $(OBJ_DIR)/timer.o \
+       $(OBJ_DIR)/rtc.o \
+       $(OBJ_DIR)/keyboard.o \
+       $(OBJ_DIR)/mouse.o \
+       $(OBJ_DIR)/mouse_simple.o \
+       $(OBJ_DIR)/mouse_minimal.o \
+       $(OBJ_DIR)/vga.o \
+       $(OBJ_DIR)/gui.o \
+       $(OBJ_DIR)/password_screen.o \
+       $(OBJ_DIR)/ide.o \
+       $(OBJ_DIR)/fs.o \
+       $(OBJ_DIR)/memory.o \
+       $(OBJ_DIR)/string.o
 
-TARGET = $(BUILDDIR)/c-os-ultimate.bin
-ISO = $(BUILDDIR)/c-os-ultimate.iso
+all: iso
 
-QEMU = qemu-system-i386
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
-.PHONY: all clean run iso
+# Boot files
+$(OBJ_DIR)/boot.o: $(SRC_DIR)/boot/boot.asm | $(OBJ_DIR)
+	$(AS) $(ASFLAGS) $< -o $@
 
-all: $(TARGET)
+$(OBJ_DIR)/isr.o: $(SRC_DIR)/boot/isr.asm | $(OBJ_DIR)
+	$(AS) $(ASFLAGS) $< -o $@
 
-$(BUILDDIR)/kernel:
-	mkdir -p $(BUILDDIR)/kernel
+$(OBJ_DIR)/irq.o: $(SRC_DIR)/boot/irq.asm | $(OBJ_DIR)
+	$(AS) $(ASFLAGS) $< -o $@
 
-$(BUILDDIR)/boot:
-	mkdir -p $(BUILDDIR)/boot
+# Kernel core
+$(OBJ_DIR)/kernel.o: $(SRC_DIR)/kernel/kernel.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILDDIR)/kernel/%.o: $(SRCDIR)/kernel/%.cpp | $(BUILDDIR)/kernel
-	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/io.o: $(SRC_DIR)/kernel/io.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILDDIR)/boot/%.o: $(SRCDIR)/boot/%.asm | $(BUILDDIR)/boot
-	$(ASM) $(ASFLAGS) $< -o $@
+$(OBJ_DIR)/idt.o: $(SRC_DIR)/kernel/idt.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
 
-$(TARGET): $(BOOT_OBJ) $(KERNEL_OBJS)
-	$(LD) $(LDFLAGS) -T $(SRCDIR)/kernel/linker.ld $^ -o $@
+$(OBJ_DIR)/serial.o: $(SRC_DIR)/kernel/serial.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
 
-iso: $(TARGET)
-	mkdir -p isodir/boot/grub
-	cp $(TARGET) isodir/boot/
-	echo 'menuentry "C-OS Ultimate" {' > isodir/boot/grub/grub.cfg
-	echo '    multiboot2 /boot/c-os-ultimate.bin' >> isodir/boot/grub/grub.cfg
-	echo '    boot' >> isodir/boot/grub/grub.cfg
-	echo '}' >> isodir/boot/grub/grub.cfg
-	grub-mkrescue -o $(ISO) isodir
+$(OBJ_DIR)/timer.o: $(SRC_DIR)/kernel/timer.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
 
-run: $(TARGET)
-	$(QEMU) -kernel $(TARGET)
+$(OBJ_DIR)/rtc.o: $(SRC_DIR)/kernel/rtc.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
 
-run-iso: $(ISO)
-	$(QEMU) -cdrom $(ISO)
+# Memory management
+$(OBJ_DIR)/memory.o: $(SRC_DIR)/kernel/mm/memory.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+# Input drivers
+$(OBJ_DIR)/keyboard.o: $(SRC_DIR)/drivers/input/keyboard.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/mouse.o: $(SRC_DIR)/drivers/input/mouse.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/mouse_simple.o: $(SRC_DIR)/drivers/input/mouse_simple.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/mouse_minimal.o: $(SRC_DIR)/drivers/input/mouse_minimal.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+# Video drivers
+$(OBJ_DIR)/vga.o: $(SRC_DIR)/drivers/video/vga.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+# Disk drivers
+$(OBJ_DIR)/ide.o: $(SRC_DIR)/drivers/disk/ide.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+# GUI
+$(OBJ_DIR)/gui.o: $(SRC_DIR)/gui/gui.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/password_screen.o: $(SRC_DIR)/gui/password_screen.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+# Filesystem
+$(OBJ_DIR)/fs.o: $(SRC_DIR)/fs/fs.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+# Library
+$(OBJ_DIR)/string.o: $(SRC_DIR)/include/string.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm | $(OBJ_DIR)
+	$(AS) $(ASFLAGS) $< -o $@
+
+kernel.bin: $(OBJS)
+	$(LD) $(LDFLAGS) -o $(KERNEL_BIN) $(OBJS)
+	cp $(KERNEL_BIN) iso/boot/kernel.bin
+
+iso: kernel.bin
+	grub-mkrescue -o c-os.iso iso
 
 clean:
-	rm -rf $(BUILDDIR)/* isodir/boot/*.bin
-
-# Windows build script
-win-build:
-	@echo "Building on Windows with WSL..."
-	wsl -d Ubuntu bash -c 'cd /mnt/c/Users/cs02z/C-OS_Ultimate_Kernel && make clean && make'
-
-win-run:
-	"C:\Program Files\qemu\qemu-system-i386.exe" -kernel $(TARGET)
+	rm -rf $(OBJ_DIR) $(KERNEL_BIN) c-os.iso

@@ -1,4 +1,3 @@
-In Development. Not a fully built OS yet.
-開発中。まだOSとは呼べない
-
-Built by my friend, posted by me. (With Permissons Of Course)
+QEMUかVirtualBoxで実行してください。
+このOSはまだネット等ができないので
+専門的なことは知らんぶっ飛ばすぞ

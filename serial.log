@@ -1,0 +1,6 @@
+[C-OS 3.0] Initializing IDT...
+[C-OS 3.0] PIC configured
+[C-OS 3.0] Timer initialization skipped (PIT causes reboot)
+[C-OS 3.0] Initializing VGA...
+[VGA] ERROR: Bootloader did not provide a framebuffer (bit12 not set).
+[VGA] Make sure GRUB sets gfxpayload=keep with a linear framebuffer.
