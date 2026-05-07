@@ -1,2 +1,2 @@
-# C-OS
-A simple operating system. Developed by my friend, posted by me.(with permissions ofc)
+開発中。まだOSとは呼べない
+初期パスワード: `1234`
